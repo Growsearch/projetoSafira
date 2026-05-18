@@ -5,11 +5,17 @@ import wikipedia
 import pywhatkit
 import os
 import requests
-import webbrowser # Nova: Para abrir sites
-import random      # Nova: Para piadas/respostas variadas
+import webbrowser
+import random
+import threading
 from urllib.parse import quote
+from kivy.lang import Builder
+from kivymd.app import MDApp
+from kivy.clock import mainthread
+from kivymd.uix.screen import MDScreen
 
-# Inicialização
+# --- CONFIGURAÇÕES DE BACKEND ---
+
 audio = sr.Recognizer()
 maquina = pyttsx3.init()
 
@@ -19,38 +25,11 @@ for voice in voices:
     if "brazil" in voice.name.lower():
         maquina.setProperty('voice', voice.id)
 
-# Ajuste de ruído GLOBAL (Apenas uma vez para ser mais rápido)
 print("Ajustando microfone para o ruído da sala... aguarde.")
 with sr.Microphone() as source:
     audio.adjust_for_ambient_noise(source, duration=1)
 
-def falar(texto):
-    print(f"Safira: {texto}")
-    maquina.say(texto)
-    maquina.runAndWait()
-
-def ouvirComando():
-    comando = ""
-    try:
-        with sr.Microphone() as source:
-            # Sem o "Ouvindo..." fixo para não poluir o terminal
-            voz = audio.listen(source, phrase_time_limit=5)
-            comando = audio.recognize_google(voz, language='pt-BR')
-            comando = comando.lower()
-            
-            if "safira" in comando:
-                comando = comando.replace("safira", "").strip()
-                # Feedback sonoro que ela ativou
-                respostas_ativacao = ["Sim?", "Pois não?", "Estou ouvindo.", "Oi!"]
-                falar(random.choice(respostas_ativacao))
-                return comando
-            
-    except sr.UnknownValueError:
-        pass # Ignora quando houver barulho que ela não entendeu
-    except Exception as e:
-        print(f"Erro: {e}")
-        
-    return ""
+# --- FUNÇÕES DE LÓGICA ---
 
 def buscar_clima(cidade):
     cidade_codificada = quote(cidade)
@@ -68,59 +47,109 @@ def buscar_clima(cidade):
         return "Não consegui checar o clima agora."
     return "Cidade não encontrada."
 
-def executar_safira():
-    comando = ouvirComando()
-    
-    if comando == "":
-        return
-    
-    print(f"Comando recebido: {comando}")
+# --- INTERFACE E APP ---
 
-    # --- LÓGICA DE COMANDOS ---
-    
-    # 1. HORAS
-    if "horas" in comando:
-        hora = datetime.datetime.now().strftime("%H:%M")
-        falar(f"Agora são {hora}")
+class MainScreen(MDScreen):
+    pass
 
-    # 2. WIKIPEDIA
-    elif "pesquisar" in comando:
-        procurar = comando.replace("pesquisar", "")
-        falar(f"Buscando {procurar}")
-        wikipedia.set_lang("pt")
-        falar(wikipedia.summary(procurar, sentences=1))
+class SafiraApp(MDApp):
+    def build(self):
+        # Carrega o KV e define o tema
+        self.theme_cls.primary_palette = "Blue"
+        return Builder.load_file("safira.kv")
 
-    # 4. CLIMA
-    elif 'tempo em' in comando:
-        cidade = comando.replace('tempo em', '').strip()
-        falar(buscar_clima(cidade))
+    def on_start(self):
+        # Inicia o loop da Safira em uma thread separada para não travar a tela
+        threading.Thread(target=self.loop_principal, daemon=True).start()
 
-    # 5. NOVIDADE: ABRIR SITES (Prático para o dia a dia)
-    elif 'abrir github' in comando:
-        falar("Abrindo seu GitHub, bons códigos!")
-        webbrowser.open("https://github.com/")
-        
-    elif 'abrir youtube' in comando:
-        falar("Abrindo YouTube, aproveite os vídeos!")
-        webbrowser.open("https://www.youtube.com/")
-        
-    elif 'abrir noticias' in comando:
-        falar("Abrindo as últimas notícias para você.")
-        webbrowser.open("")
+    # --- ATUALIZADORES DE INTERFACE (Thread Safe) ---
+    @mainthread
+    def atualizar_status(self, texto):
+        self.root.get_screen('main').ids.status_label.text = texto
 
-    # 7. NOVIDADE: CRIAR NOTA RÁPIDA (Manipulação de arquivos)
-    elif 'anote' in comando or 'anotar' in comando:
-        nota = comando.replace('anote', '').replace('anotar', '').strip()
-        with open("notas.txt", "a") as f:
-            f.write(f"- {nota}\n")
-        falar("Anotei no seu bloco de notas.")
+    @mainthread
+    def atualizar_comando_lido(self, texto):
+        self.root.get_screen('main').ids.last_command.text = f"Você disse: {texto}"
 
-    # 8. SAIR
-    elif "desligar" in comando or "sair" in comando:
-        falar("Encerrando sistemas. Até logo!")
-        exit()
+    # --- LOOP PRINCIPAL ---
+    def falar(self, texto):
+        print(f"Safira: {texto}")
+        # Atualiza a interface antes de falar
+        self.atualizar_status(texto)
+        maquina.say(texto)
+        maquina.runAndWait()
 
-# ------ INICIO ------
-falar("Safira online e pronta.")
-while True:
-    executar_safira()
+    def ouvir_comando(self):
+        try:
+            with sr.Microphone() as source:
+                voz = audio.listen(source, phrase_time_limit=5)
+                comando = audio.recognize_google(voz, language='pt-BR').lower()
+                
+                if "safira" in comando:
+                    comando = comando.replace("safira", "").strip()
+                    respostas_ativacao = ["Sim?", "Pois não?", "Estou ouvindo.", "Oi!"]
+                    ativacao = random.choice(respostas_ativacao)
+                    self.falar(ativacao)
+                    return comando
+        except sr.UnknownValueError:
+            pass
+        except Exception as e:
+            print(f"Erro no microfone: {e}")
+        return ""
+
+    def loop_principal(self):
+        while True:
+            comando = self.ouvir_comando()
+            
+            if comando != "":
+                self.atualizar_comando_lido(comando)
+                print(f"Comando recebido: {comando}")
+
+                # 1. HORAS
+                if "horas" in comando:
+                    hora = datetime.datetime.now().strftime("%H:%M")
+                    self.falar(f"Agora são {hora}")
+
+                # 2. WIKIPEDIA
+                elif "pesquisar" in comando:
+                    procurar = comando.replace("pesquisar", "").strip()
+                    self.falar(f"Buscando {procurar}")
+                    try:
+                        wikipedia.set_lang("pt")
+                        resumo = wikipedia.summary(procurar, sentences=1)
+                        self.falar(resumo)
+                    except:
+                        self.falar("Não encontrei nada sobre isso.")
+
+                # 3. CLIMA
+                elif 'tempo em' in comando:
+                    cidade = comando.replace('tempo em', '').strip()
+                    self.falar(buscar_clima(cidade))
+
+                # 4. ABRIR SITES
+                elif 'abrir github' in comando:
+                    self.falar("Abrindo seu GitHub, bons códigos!")
+                    webbrowser.open("https://github.com")
+                    
+                elif 'abrir youtube' in comando:
+                    self.falar("Abrindo YouTube.")
+                    webbrowser.open("https://www.youtube.com/")
+                    
+                elif 'abrir noticias' in comando:
+                    self.falar("Abrindo as últimas notícias.")
+                    webbrowser.open("https://jovempan.com.br/")
+
+                # 5. CRIAR NOTA
+                elif 'anote' in comando or 'anotar' in comando:
+                    nota = comando.replace('anote', '').replace('anotar', '').strip()
+                    with open("notas.txt", "a", encoding="utf-8") as f:
+                        f.write(f"- {nota} ({datetime.datetime.now().strftime('%d/%m')})\n")
+                    self.falar("Anotei no seu bloco de notas.")
+
+                # 6. SAIR
+                elif "desligar" in comando or "sair" in comando:
+                    self.falar("Encerrando sistemas. Até logo!")
+                    os._exit(0) # Força o fechamento de todas as threads
+
+if __name__ == "__main__":
+    SafiraApp().run()

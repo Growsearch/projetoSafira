@@ -1,0 +1,90 @@
+ScreenManager:
+    MainScreen:
+
+<MainScreen>:
+    name: 'main'
+    
+    canvas.before:
+        Color:
+            rgba: 0.05, 0.1, 0.2, 1 
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+    MDBoxLayout:
+        orientation: 'vertical'
+        padding: "24dp"
+        spacing: "20dp"
+
+        # ------------------ Cabeçalho ---------------- 
+        MDBoxLayout:
+            orientation: 'vertical'
+            size_hint_y: .3
+            Image:
+                source: "Safira.png"
+                size_hint: None, None
+                size: "120dp", "120dp"
+                pos_hint: {"center_x": .5}
+            
+            MDLabel:
+                text: "SAFIRA IA"
+                halign: "center"
+                font_style: "H5"
+                theme_text_color: "Custom"
+                text_color: 1, 1, 1, 1
+                bold: True
+
+        # ------------------ Área Central ---------------- 
+        MDCard:
+            orientation: 'vertical'
+            padding: "16dp"
+            spacing: "10dp" 
+            size_hint: .9, .4
+            pos_hint: {"center_x": .5}
+            radius: [20,]
+            md_bg_color: 1, 1, 1, 0.15
+
+            # Label de Resposta (O que a Safira fala)
+            MDLabel:
+                id: status_label
+                text: "Aguardando comando..."
+                halign: "center"
+                valign: "top" # Centraliza verticalmente
+                font_style: "H4"
+                theme_text_color: "Custom"
+                text_color: 1, 1, 0, 0.8
+                size_hint_y: 0.4 # Ocupa 60% do card
+
+            MDSeparator:
+                height: "1dp"
+                md_bg_color: 1, 1, 1, 0.3
+
+            # Label do Comando (O que você disse)
+            MDLabel:
+                id: last_command
+                text: "Diga 'Safira' para começar"
+                halign: "center"
+                valign: "top"
+                font_style: "Caption"
+                theme_text_color: "Custom"
+                text_color: 0.8, 0.8, 0.8, 1
+                size_hint_y: 0.3 # Ocupa 30% do card
+
+        # ------------------ Botões ---------------- 
+        MDBoxLayout:
+            orientation: 'horizontal'
+            spacing: "20dp"
+            size_hint_y: .2
+            pos_hint: {"center_x": .5}
+            adaptive_width: True
+
+            MDFloatingActionButton:
+                icon: "microphone"
+                md_bg_color: 0.1, 0.4, 0.8, 1
+
+            MDFloatingActionButton:
+                icon: "history"
+                md_bg_color: 0.5, 0.5, 0.5, 1
+
+        Widget:
+            size_hint_y: .1
