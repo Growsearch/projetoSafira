@@ -47,13 +47,14 @@ ScreenManager:
             # Label de Resposta (O que a Safira fala)
             MDLabel:
                 id: status_label
-                text: "Aguardando comando..."
+                text: root.status_text
                 halign: "center"
-                valign: "top" # Centraliza verticalmente
-                font_style: "H4"
+                valign: "center"
+                font_style: "H6"
                 theme_text_color: "Custom"
                 text_color: 1, 1, 0, 0.8
-                size_hint_y: 0.4 # Ocupa 60% do card
+                size_hint_y: 0.7
+                text_size: self.width, None
 
             MDSeparator:
                 height: "1dp"
@@ -62,13 +63,14 @@ ScreenManager:
             # Label do Comando (O que você disse)
             MDLabel:
                 id: last_command
-                text: "Diga 'Safira' para começar"
+                text: root.command_text
                 halign: "center"
-                valign: "top"
+                valign: "center"
                 font_style: "Caption"
                 theme_text_color: "Custom"
                 text_color: 0.8, 0.8, 0.8, 1
-                size_hint_y: 0.3 # Ocupa 30% do card
+                size_hint_y: 0.2
+                text_size: self.width, None
 
         # ------------------ Botões ---------------- 
         MDBoxLayout:

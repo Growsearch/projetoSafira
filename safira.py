@@ -13,6 +13,7 @@ from kivy.lang import Builder
 from kivymd.app import MDApp
 from kivy.clock import mainthread
 from kivymd.uix.screen import MDScreen
+from kivy.properties import StringProperty
 
 # --- CONFIGURAÇÕES DE BACKEND ---
 
@@ -20,14 +21,14 @@ audio = sr.Recognizer()
 maquina = pyttsx3.init()
 
 # Configuração de voz
-voices = maquina.getProperty('voices')
-for voice in voices:
-    if "brazil" in voice.name.lower():
-        maquina.setProperty('voice', voice.id)
-
-print("Ajustando microfone para o ruído da sala... aguarde.")
-with sr.Microphone() as source:
-    audio.adjust_for_ambient_noise(source, duration=1)
+try:
+    voices = maquina.getProperty("voices")
+    for voice in voices:
+        if "brazil" in voice.name.lower():
+            maquina.setProperty("voice", voice.id)
+            break
+except Exception as e:
+    print(f"Erro ao configurar voz: {e}")
 
 # --- FUNÇÕES DE LÓGICA ---
 
@@ -39,9 +40,9 @@ def buscar_clima(cidade):
     try:
         requisicao = requests.get(link)
         dados = requisicao.json()
-        if dados['cod'] == 200:
-            temp = dados['main']['temp']
-            desc = dados['weather'][0]['description']
+        if dados.get("cod") == 200:
+            temp = dados["main"]["temp"]
+            desc = dados["weather"][0]["description"]
             return f"Em {cidade}, faz {temp:.1f} graus com {desc}."
     except:
         return "Não consegui checar o clima agora."
@@ -50,31 +51,48 @@ def buscar_clima(cidade):
 # --- INTERFACE E APP ---
 
 class MainScreen(MDScreen):
-    pass
+    status_text = StringProperty("Aguardando comando...")
+    command_text = StringProperty("Diga 'Safira' para começar")
 
 class SafiraApp(MDApp):
     def build(self):
-        # Carrega o KV e define o tema
         self.theme_cls.primary_palette = "Blue"
+        self.theme_cls.theme_style = "Dark" # Estilo escuro para combinar com o canvas
         return Builder.load_file("safira.kv")
 
     def on_start(self):
-        # Inicia o loop da Safira em uma thread separada para não travar a tela
-        threading.Thread(target=self.loop_principal, daemon=True).start()
+        # Ajuste do microfone em uma thread para não travar a abertura do app
+        threading.Thread(target=self.inicializar_audio, daemon=True).start()
+
+    def inicializar_audio(self):
+        self.atualizar_status("Ajustando microfone...")
+        try:
+            with sr.Microphone() as source:
+                audio.adjust_for_ambient_noise(source, duration=1)
+            self.atualizar_status("Safira pronta!")
+            self.loop_principal()
+        except Exception as e:
+            self.atualizar_status(f"Erro de áudio: {e}")
 
     # --- ATUALIZADORES DE INTERFACE (Thread Safe) ---
     @mainthread
     def atualizar_status(self, texto):
-        self.root.get_screen('main').ids.status_label.text = texto
+        # Busca a tela de forma segura
+        if self.root:
+            screen = self.root.get_screen("main")
+            if screen:
+                screen.status_text = texto
 
     @mainthread
     def atualizar_comando_lido(self, texto):
-        self.root.get_screen('main').ids.last_command.text = f"Você disse: {texto}"
+        if self.root:
+            screen = self.root.get_screen("main")
+            if screen:
+                screen.command_text = f"Você disse: {texto}"
 
     # --- LOOP PRINCIPAL ---
     def falar(self, texto):
         print(f"Safira: {texto}")
-        # Atualiza a interface antes de falar
         self.atualizar_status(texto)
         maquina.say(texto)
         maquina.runAndWait()
@@ -83,7 +101,7 @@ class SafiraApp(MDApp):
         try:
             with sr.Microphone() as source:
                 voz = audio.listen(source, phrase_time_limit=5)
-                comando = audio.recognize_google(voz, language='pt-BR').lower()
+                comando = audio.recognize_google(voz, language="pt-BR").lower()
                 
                 if "safira" in comando:
                     comando = comando.replace("safira", "").strip()
@@ -103,14 +121,11 @@ class SafiraApp(MDApp):
             
             if comando != "":
                 self.atualizar_comando_lido(comando)
-                print(f"Comando recebido: {comando}")
-
-                # 1. HORAS
+                
                 if "horas" in comando:
                     hora = datetime.datetime.now().strftime("%H:%M")
                     self.falar(f"Agora são {hora}")
 
-                # 2. WIKIPEDIA
                 elif "pesquisar" in comando:
                     procurar = comando.replace("pesquisar", "").strip()
                     self.falar(f"Buscando {procurar}")
@@ -121,35 +136,27 @@ class SafiraApp(MDApp):
                     except:
                         self.falar("Não encontrei nada sobre isso.")
 
-                # 3. CLIMA
-                elif 'tempo em' in comando:
-                    cidade = comando.replace('tempo em', '').strip()
+                elif "tempo em" in comando:
+                    cidade = comando.replace("tempo em", "").strip()
                     self.falar(buscar_clima(cidade))
 
-                # 4. ABRIR SITES
-                elif 'abrir github' in comando:
-                    self.falar("Abrindo seu GitHub, bons códigos!")
+                elif "abrir github" in comando:
+                    self.falar("Abrindo seu GitHub.")
                     webbrowser.open("https://github.com")
                     
-                elif 'abrir youtube' in comando:
+                elif "abrir youtube" in comando:
                     self.falar("Abrindo YouTube.")
                     webbrowser.open("https://www.youtube.com/")
                     
-                elif 'abrir noticias' in comando:
-                    self.falar("Abrindo as últimas notícias.")
-                    webbrowser.open("https://jovempan.com.br/")
-
-                # 5. CRIAR NOTA
-                elif 'anote' in comando or 'anotar' in comando:
-                    nota = comando.replace('anote', '').replace('anotar', '').strip()
+                elif "anote" in comando or "anotar" in comando:
+                    nota = comando.replace("anote", "").replace("anotar", "").strip()
                     with open("notas.txt", "a", encoding="utf-8") as f:
                         f.write(f"- {nota} ({datetime.datetime.now().strftime('%d/%m')})\n")
                     self.falar("Anotei no seu bloco de notas.")
 
-                # 6. SAIR
                 elif "desligar" in comando or "sair" in comando:
-                    self.falar("Encerrando sistemas. Até logo!")
-                    os._exit(0) # Força o fechamento de todas as threads
+                    self.falar("Até logo!")
+                    os._exit(0)
 
 if __name__ == "__main__":
     SafiraApp().run()
