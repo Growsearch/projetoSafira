@@ -1,7 +1,7 @@
-import speech_recognition as sr
-import pyttsx3
+import speech_recognition as sr # para importar: pip install SpeechRecognition
+import pyttsx3  # para instalar : pip install pyttsx3
 import datetime
-import wikipedia
+import wikipedia  # para instalar: pip install wikipedia
 import pywhatkit
 import os
 import requests
@@ -47,6 +47,25 @@ def buscar_clima(cidade):
     except:
         return "Não consegui checar o clima agora."
     return "Cidade não encontrada."
+
+def buscar_cripto(moeda_id, moeda_name):
+    # Api do coin market cap
+    link = f"https://api.coingecko.com/api/v3/simple/price?ids={moeda_id}&vs_currencies=brl"
+    
+    try:
+        headers = {'User-agent' : 'Mozilla/5.0'}
+        requisicao = requests.get(link, headers=headers)
+        dados = requisicao.json()
+        
+        if moeda_id in dados:
+            preco = dados[moeda_id]["brl"]
+            preco_formatado = f"R$ {preco:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            return (f"O preço atual do {moeda_name} é {preco_formatado}")
+    except Exception as e:
+        print(f"Erro ao buscar preço da criptomoeda: {e}")
+        return ("Não consegui checar o preço agora.")
+        
+    return ("Moeda não encontrada.")
 
 # --- INTERFACE E APP ---
 
@@ -153,6 +172,21 @@ class SafiraApp(MDApp):
                     with open("notas.txt", "a", encoding="utf-8") as f:
                         f.write(f"- {nota} ({datetime.datetime.now().strftime('%d/%m')})\n")
                     self.falar("Anotei no seu bloco de notas.")
+                    
+                elif "preço do bitcoin" in comando or "valor do Bitcoin" in comando:
+                    self.falar("Checando preço do Bitcoin...")
+                    resposta = buscar_cripto("bitcoin", "Bitcoin")
+                    self.falar(resposta)
+                    
+                elif "preço do ethereum" in comando or "valor do ethereum" in comando:
+                    self.falar("Checando preço do Ethereum...")
+                    resposta = buscar_cripto("ethereum", "Ethereum")
+                    self.falar(resposta)
+                    
+                elif "preço da Solana" in comando or "valor da Solana" in comando:
+                    self.falar("Checando preço da Solana...")
+                    resposta = buscar_cripto("solana", "Solana")
+                    self.falar(resposta)
 
                 elif "desligar" in comando or "sair" in comando:
                     self.falar("Até logo!")
