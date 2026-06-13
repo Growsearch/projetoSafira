@@ -4,27 +4,31 @@ ScreenManager:
 <MainScreen>:
     name: 'main'
     
+    # Fundo Premium Sólido (Azul Noturno Profundo)
     canvas.before:
         Color:
-            rgba: 0.05, 0.1, 0.2, 1 
+            rgba: 0.04, 0.06, 0.15, 1 
         Rectangle:
             pos: self.pos
             size: self.size
 
     MDBoxLayout:
         orientation: 'vertical'
-        padding: "24dp"
-        spacing: "20dp"
+        padding: "32dp"
+        spacing: "24dp"
 
         # ------------------ Cabeçalho ---------------- 
         MDBoxLayout:
             orientation: 'vertical'
-            size_hint_y: .3
+            size_hint_y: .35
+            spacing: "12dp"
+            
             Image:
                 source: "Safira.png"
                 size_hint: None, None
-                size: "120dp", "120dp"
+                size: "110dp", "110dp"
                 pos_hint: {"center_x": .5}
+                allow_stretch: True
             
             MDLabel:
                 text: "SAFIRA IA"
@@ -33,56 +37,63 @@ ScreenManager:
                 theme_text_color: "Custom"
                 text_color: 1, 1, 1, 1
                 bold: True
+                letter_spacing: "2sp"
 
-        # ------------------ Área Central ---------------- 
+        # ------------------ Área Central (Glassmorphic) ---------------- 
         MDCard:
             orientation: 'vertical'
-            padding: "16dp"
-            spacing: "10dp" 
-            size_hint: .9, .4
+            padding: "24dp"
+            spacing: "14dp" 
+            size_hint: .95, .45
             pos_hint: {"center_x": .5}
-            radius: [20,]
-            md_bg_color: 1, 1, 1, 0.15
+            radius: [24,]
+            md_bg_color: 1, 1, 1, 0.07  # Efeito vidro jateado
+            line_color: 1, 1, 1, 0.15   # Borda fina brilhante
+            elevation: 0
 
-            # Label de Resposta (O que a Safira fala)
+            # Label de Resposta - Sincronizado com o Python
             MDLabel:
                 id: status_label
                 text: root.status_text
                 halign: "center"
-                valign: "center"
+                valign: "middle"
                 font_style: "H6"
                 theme_text_color: "Custom"
-                text_color: 1, 1, 0, 0.8
-                size_hint_y: 0.7
-                text_size: self.width, None
+                text_color: 0.0, 0.75, 1.0, 0.95  # Ciano Safira Vibrante
+                size_hint_y: 0.65
+                text_size: self.width, self.height
+                bold: True
 
             MDSeparator:
                 height: "1dp"
-                md_bg_color: 1, 1, 1, 0.3
+                md_bg_color: 1, 1, 1, 0.15
 
-            # Label do Comando (O que você disse)
+            # Label do Comando Lido - Sincronizado com o Python
             MDLabel:
                 id: last_command
                 text: root.command_text
                 halign: "center"
-                valign: "center"
-                font_style: "Caption"
+                valign: "middle"
+                font_style: "Body2"
                 theme_text_color: "Custom"
-                text_color: 0.8, 0.8, 0.8, 1
-                size_hint_y: 0.2
-                text_size: self.width, None
+                text_color: 0.7, 0.7, 0.8, 0.8
+                size_hint_y: 0.35
+                text_size: self.width, self.height
 
-        # ------------------ Botões ---------------- 
+        # ------------------ Botões de Controle ---------------- 
         MDBoxLayout:
             orientation: 'horizontal'
-            spacing: "20dp"
+            spacing: "24dp"
             size_hint_y: .2
-            pos_hint: {"center_x": .5}
+            pos_hint: {"center_x": .5, "center_y": .5}
             adaptive_width: True
-
+            
+            # Botão de Microfone Principal (Adicionado de volta)
             MDFloatingActionButton:
-                icon: "history"
-                md_bg_color: 0.5, 0.5, 0.5, 1
+                icon: "microphone"
+                icon_color: 1, 1, 1, 1
+                md_bg_color: 0.0, 0.5, 1.0, 1  # Azul Neon Dinâmico
+                elevation_normal: 4
 
         Widget:
-            size_hint_y: .1
+            size_hint_y: .05
